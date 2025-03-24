@@ -1,16 +1,35 @@
 from opto import trace
 from opto.trace import node, bundle
+from opto.optimizers import OptoPrime
 import ollama
 import datetime
+import re
 
 # Select the model
 # Llama2 cannot call tools
-# MODEL = "llama2:7b"
+MODEL = "llama2:7b"
 # Llama3 can call tools
-MODEL = "llama3.1:8b"
+# MODEL = "llama3.1:8b"
 
 TEMPERATURE = 0.7
 
+
+def get_date_feedback(predict):
+    date_regex = r"^\d{4}-\d{2}-\d{2}$"
+    # Validate that the input is in the correct format.
+    if not re.fullmatch(date_regex, predict):
+        return "Error: Date format incorrect. Expected YYYY-MM-DD."
+    
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    if predict == date:
+        return "Success!"
+    else:
+        # Note: this is not behavior cloning, but RL. For BC also return correct date (but that might lead to overfitting.)
+        return f"Error: Wrong date."
+    
+       
+    
 @trace.model
 class LLMAgent:
 
@@ -160,6 +179,7 @@ class LLMAgent:
                         )
                         print("RESPONSE >>>", followup_response)
 
+                        # Thsi will fire and return for the first tool that executed successfully.
                         return followup_response["message"]["content"]
                     
                     except ValueError as e:
@@ -236,17 +256,17 @@ def test_tool_execution():
     agent = LLMAgent(MODEL)
     
     # Test using the time tool
-    query2 = "What time is it now in New York? Take the timezone into account."
+    query2 = "What day is today? Return it in the format YEAR-MONTH-DAY, without any additional text."
     # query2 = "What is love?"
     print("\nQuery:", query2)
     answer2 = agent.process_query(query2)
     print("===============\nResponse:", answer2.data)
     
-    # Test case 1: Query with arithmetic expression.
-    query1 = "What is 1+3/(25+7)^2?"
-    print("Query:", query1)
-    answer1 = agent.process_query(query1)
-    print("===============\nResponse:", answer1.data)
+    # # Test case 1: Query with arithmetic expression.
+    # query1 = "What is 1+3/(25+7)^2?"
+    # print("Query:", query1)
+    # answer1 = agent.process_query(query1)
+    # print("===============\nResponse:", answer1.data)
 
 
 
